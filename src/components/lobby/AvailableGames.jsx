@@ -14,7 +14,7 @@ const AvailableGames = () => {
     useEffect(() => {
         const fetchGames = async () => {
             try {
-                const response = await axios.get('/api/games/');
+                const response = await getAvailableGames();
                 console.log(response.data); // Log the data to check its format
                 if (Array.isArray(response.data)) {
                     setGames(response.data); // Ensure response.data is an array
@@ -45,7 +45,7 @@ const AvailableGames = () => {
             await joinGame(gameId);
             alert('Successfully joined the game');
             // Optionally refresh the game list
-            const response = await axios.get('/api/games/');
+            const response = await joinGame();
             console.log(response.data); // Log the data to check its format
             if (Array.isArray(response.data)) {
                 setGames(response.data); // Ensure response.data is an array
