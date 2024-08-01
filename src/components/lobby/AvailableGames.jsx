@@ -2,22 +2,29 @@
 import React, { useState, useEffect } from 'react';
 import { getAvailableGames, joinGame } from './game.service';
 import useWebSocket from '../../hooks/useWebSocket';
+import axios from 'axios';
 
 const AvailableGames = () => {
-    const [games, setGames] = useState([]);
+    const [games, setGames] = useState([]); // Initialize as empty array
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [currentGameId, setCurrentGameId] = useState(null);
     const { message } = useWebSocket(currentGameId);
-    
 
     useEffect(() => {
         const fetchGames = async () => {
             try {
-                const gamesList = await getAvailableGames();
-                setGames(gamesList);
+                const response = await axios.get('/api/games/');
+                console.log(response.data); // Log the data to check its format
+                if (Array.isArray(response.data)) {
+                    setGames(response.data); // Ensure response.data is an array
+                } else if (response.data.results && Array.isArray(response.data.results)) {
+                    setGames(response.data.results); // Handle paginated results
+                } else {
+                    setGames([]); // Handle unexpected data format
+                }
             } catch (err) {
-                setError('Failed to fetch games');
+                setError(err.message);
             } finally {
                 setLoading(false);
             }
@@ -26,40 +33,52 @@ const AvailableGames = () => {
         fetchGames();
     }, []);
 
+    useEffect(() => {
+        if (message) {
+            console.log('Received message:', message);
+            // Optionally handle the WebSocket message here
+        }
+    }, [message]);
+
     const handleJoinGame = async (gameId) => {
         try {
             await joinGame(gameId);
             alert('Successfully joined the game');
             // Optionally refresh the game list
-            const gamesList = await getAvailableGames();
-            setGames(gamesList);
+            const response = await axios.get('/api/games/');
+            console.log(response.data); // Log the data to check its format
+            if (Array.isArray(response.data)) {
+                setGames(response.data); // Ensure response.data is an array
+            } else if (response.data.results && Array.isArray(response.data.results)) {
+                setGames(response.data.results); // Handle paginated results
+            } else {
+                setGames([]); // Handle unexpected data format
+            }
             setCurrentGameId(gameId);
         } catch (err) {
             alert('Failed to join the game');
         }
     };
 
-    useEffect(() => {
-        if (message) {
-            console.log('Received message:', message);
-        }
-    }, [message]);
-
     if (loading) return <p>Loading games...</p>;
-    if (error) return <p>{error}</p>;
+    if (error) return <p>Error: {error}</p>;
 
     return (
         <div>
             <h2>Available Games</h2>
-            <ul>
-                {games.map(game => (
-                    <li key={game.game_id}>
-                        <p><strong>Game ID:</strong> {game.game_id}</p>
-                        <p><strong>Owner:</strong> {game.owner}</p>
-                        <button onClick={() => handleJoinGame(game.game_id)}>Join Game</button>
-                    </li>
-                ))}
-            </ul>
+            {games.length === 0 ? (
+                <p>No games available.</p>
+            ) : (
+                <ul>
+                    {games.map(game => (
+                        <li key={game.id}>
+                            <p><strong>Game ID:</strong> {game.id}</p>
+                            <p><strong>Owner:</strong> {game.owner}</p>
+                            <button onClick={() => handleJoinGame(game.id)}>Join Game</button>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
     );
 };
