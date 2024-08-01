@@ -1,14 +1,16 @@
-from django.conf import settings
+from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Game
-from .serializers import GameSerializer
-from django.contrib.auth.models import User
+from rest_framework.permissions import IsAuthenticated
+from .models import Game, Question
+from .serializers import GameSerializer, QuestionSerializer
 import pusher
+from django.conf import settings
+from django.contrib.auth.models import User 
 
+# Initialize Pusher client
 pusher_client = pusher.Pusher(
     app_id=settings.PUSHER_APP_ID,
     key=settings.PUSHER_KEY,
@@ -18,18 +20,42 @@ pusher_client = pusher.Pusher(
 )
 
 class StartGameView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, game_id):
         game = get_object_or_404(Game, id=game_id)
         if request.user != game.owner:
             return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
         
-        game.status = 'active'
-        game.save()
+        game.start_game()
 
         # Trigger a Pusher event
         pusher_client.trigger('game-channel', 'game-start', {'game_id': game.id})
 
-        return Response({'status': 'Game started'}, status=status.HTTP_200_OK)
+        return Response(GameSerializer(game).data, status=status.HTTP_200_OK)
+
+class SubmitAnswerView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, game_id):
+        game = get_object_or_404(Game, id=game_id)
+        if request.user not in game.participants.all():
+            return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+
+        answer = request.data.get('answer')
+        if not answer:
+            return Response({'error': 'Answer not provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        is_correct = answer == game.current_question.correct_answer
+        game.update_incorrect_count(is_correct)
+
+        if game.game_status == 'completed':
+            return Response({'status': 'Game completed'}, status=status.HTTP_200_OK)
+        
+        game.current_question = game.get_next_question()
+        game.save()
+
+        return Response(GameSerializer(game).data, status=status.HTTP_200_OK)
 
 class GameCreateView(generics.CreateAPIView):
     queryset = Game.objects.all()
@@ -51,7 +77,7 @@ class GameRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 class GameListView(generics.ListAPIView):
     serializer_class = GameSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         """
@@ -60,6 +86,8 @@ class GameListView(generics.ListAPIView):
         return Game.objects.filter(game_status='waiting')
 
 class JoinGameView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, pk):
         try:
             game = Game.objects.get(pk=pk)
@@ -71,9 +99,12 @@ class JoinGameView(APIView):
 
         # Add logic to handle joining the game here
         # For example, adding the user to the participants list
+        game.participants.add(request.user)
         return Response({'message': 'Successfully joined the game.'}, status=status.HTTP_200_OK)
 
 class AcceptJoinRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, game_id):
         game = get_object_or_404(Game, id=game_id)
         if request.user != game.owner:
