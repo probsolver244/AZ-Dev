@@ -1,17 +1,35 @@
-from django.shortcuts import render
-
-# Create your views here.
-# game_app/views.py
-# game_app/views.py
-from rest_framework import generics, permissions
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+from rest_framework import generics, permissions, status
 from rest_framework.permissions import IsAuthenticated
-from .models import Game
-from .serializers import GameSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
-from django.shortcuts import get_object_or_404
+from .models import Game
+from .serializers import GameSerializer
 from django.contrib.auth.models import User
+import pusher
+
+pusher_client = pusher.Pusher(
+    app_id=settings.PUSHER_APP_ID,
+    key=settings.PUSHER_KEY,
+    secret=settings.PUSHER_SECRET,
+    cluster=settings.PUSHER_CLUSTER,
+    ssl=settings.PUSHER_SSL
+)
+
+class StartGameView(APIView):
+    def post(self, request, game_id):
+        game = get_object_or_404(Game, id=game_id)
+        if request.user != game.owner:
+            return Response({'error': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+        
+        game.status = 'active'
+        game.save()
+
+        # Trigger a Pusher event
+        pusher_client.trigger('game-channel', 'game-start', {'game_id': game.id})
+
+        return Response({'status': 'Game started'}, status=status.HTTP_200_OK)
 
 class GameCreateView(generics.CreateAPIView):
     queryset = Game.objects.all()
