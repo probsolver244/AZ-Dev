@@ -14,12 +14,12 @@ const AvailableGames = () => {
     useEffect(() => {
         const fetchGames = async () => {
             try {
-                const response = await getAvailableGames();
-                console.log(response.data); // Log the data to check its format
-                if (Array.isArray(response.data)) {
-                    setGames(response.data); // Ensure response.data is an array
-                } else if (response.data.results && Array.isArray(response.data.results)) {
-                    setGames(response.data.results); // Handle paginated results
+                const gamesData= await getAvailableGames();
+                console.log(gamesData); // Log the data to check its format
+                if (Array.isArray(gamesData)) {
+                    setGames(gamesData); // Ensure response.data is an array
+                } else if (gamesData.results && Array.isArray(gamesData.results)) {
+                    setGames(gamesData.results); // Handle paginated results
                 } else {
                     setGames([]); // Handle unexpected data format
                 }
@@ -45,12 +45,12 @@ const AvailableGames = () => {
             await joinGame(gameId);
             alert('Successfully joined the game');
             // Optionally refresh the game list
-            const response = await joinGame();
-            console.log(response.data); // Log the data to check its format
-            if (Array.isArray(response.data)) {
-                setGames(response.data); // Ensure response.data is an array
-            } else if (response.data.results && Array.isArray(response.data.results)) {
-                setGames(response.data.results); // Handle paginated results
+            const gamesData= await getAvailableGames();
+            console.log(gamesData); // Log the data to check its format
+            if (Array.isArray(gamesData)) {
+                setGames(gamesData); // Ensure response.data is an array
+            } else if (gamesData.results && Array.isArray(gamesData.results)) {
+                setGames(gamesData.results); // Handle paginated results
             } else {
                 setGames([]); // Handle unexpected data format
             }

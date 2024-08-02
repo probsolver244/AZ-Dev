@@ -43,7 +43,7 @@ const MCQ = ({ gameId }) => {
                     <button onClick={handleSubmit}>Submit Answer</button>
                 </div>
             ) : (
-                <p>Game over</p>
+                <p>Game over. The winner is: {game && game.scores && Object.keys(game.scores).length ? `Player ${game.get_winner()} with ${game.scores[game.get_winner()]} points` : 'No one'}</p>
             )}
         </div>
     );
