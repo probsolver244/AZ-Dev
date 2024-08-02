@@ -53,11 +53,7 @@ CHANNEL_LAYERS = {
 
 # settings.py
 
-PUSHER_APP_ID = '1842569'
-PUSHER_KEY = '5a8cf4acbfa2cd4ac109'
-PUSHER_SECRET = '7726191906e71a0c15ae'
-PUSHER_CLUSTER = 'ap2'
-PUSHER_SSL = True
+
 
 
 
