@@ -32,6 +32,7 @@ class Game(models.Model):
     incorrect_count = models.IntegerField(default=0)
     max_incorrect = models.IntegerField(default=3)
     time_limit = models.IntegerField(default=600)  # 10 minutes
+    scores = models.JSONField(default=dict)
 
     def start_game(self):
         self.started_at = timezone.now()
@@ -61,6 +62,11 @@ class Game(models.Model):
     def end_game(self):
         self.game_status = 'completed'
         self.save()
+
+        def get_winner(self):
+         if self.game_status != 'completed':
+            return None
+        return max(self.scores, key=self.scores.get)
 
     def __str__(self):
         return f"Game {self.id} ({self.game_status})"

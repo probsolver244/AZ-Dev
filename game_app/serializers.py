@@ -32,3 +32,5 @@ class GameSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+class SubmitAnswerSerializer(serializers.Serializer):
+    answer = serializers.CharField(max_length=255)

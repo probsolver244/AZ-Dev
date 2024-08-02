@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from .models import Game, Question
-from .serializers import GameSerializer, QuestionSerializer
+from .serializers import GameSerializer, QuestionSerializer,SubmitAnswerSerializer
 import pusher
 from django.conf import settings
 from django.contrib.auth.models import User 
@@ -51,6 +51,21 @@ class SubmitAnswerView(APIView):
 
         if game.game_status == 'completed':
             return Response({'status': 'Game completed'}, status=status.HTTP_200_OK)
+        
+        serializer = SubmitAnswerSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        answer = serializer.validated_data['answer']
+        is_correct = (answer == game.current_question.correct_answer)
+            
+            # Update the game's state
+        participant_id = request.user.id
+        game.update_incorrect_count(participant_id, is_correct)
+            
+            # Check if the game has ended
+        if game.game_status == 'completed':
+                return Response({'status': 'Game completed', 'winner': game.get_winner()}, status=status.HTTP_200_OK)
         
         game.current_question = game.get_next_question()
         game.save()
